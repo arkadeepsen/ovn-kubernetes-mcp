@@ -11,3 +11,6 @@ build:
 clean:
 	rm -Rf _output/
 
+.PHONY: test
+test:
+	go test -v ./...
