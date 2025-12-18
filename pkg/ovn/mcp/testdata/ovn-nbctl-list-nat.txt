@@ -1,0 +1,42 @@
+_uuid               : 8a7b6c5d-4e3f-2a1b-0c9d-8e7f6a5b4c3d
+allowed_ext_ips     : []
+exempted_ext_ips    : []
+external_ids        : {"k8s.ovn.org/id"="default-network-controller:EgressIP:egressip-nat"}
+external_ip         : "172.18.0.3"
+external_mac        : []
+external_port_range : ""
+gateway_port        : []
+logical_ip          : "10.244.1.0/24"
+logical_port        : []
+match               : ""
+options             : {stateless="false"}
+type                : snat
+
+_uuid               : 1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d
+allowed_ext_ips     : []
+exempted_ext_ips    : []
+external_ids        : {"k8s.ovn.org/id"="default-network-controller:EgressIP:egressip-nat-2"}
+external_ip         : "172.18.0.2"
+external_mac        : []
+external_port_range : ""
+gateway_port        : []
+logical_ip          : "10.244.0.0/24"
+logical_port        : []
+match               : ""
+options             : {stateless="false"}
+type                : snat
+
+_uuid               : 2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e
+allowed_ext_ips     : []
+exempted_ext_ips    : []
+external_ids        : {"k8s.ovn.org/id"="default-network-controller:Service:default/nginx-service"}
+external_ip         : "172.18.0.100"
+external_mac        : "0a:58:0a:f4:01:05"
+external_port_range : ""
+gateway_port        : []
+logical_ip          : "10.244.1.5"
+logical_port        : "default_nginx-deployment-5d7f8b9c7d-abc12"
+match               : ""
+options             : {stateless="false"}
+type                : dnat_and_snat
+

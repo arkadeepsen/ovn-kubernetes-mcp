@@ -14,6 +14,7 @@ import (
 	kernelmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/mcp"
 	kubernetesmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/mcp"
 	mustgathermcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/must-gather/mcp"
+	ovnmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/ovn/mcp"
 	ovsmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/ovs/mcp"
 	sosreportmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/sosreport/mcp"
 )
@@ -33,6 +34,10 @@ func setupLiveCluster(serverCfg *MCPServerConfig, server *mcp.Server) {
 	}
 	log.Println("Adding Kubernetes tools to OVN-K MCP server")
 	k8sMcpServer.AddTools(server)
+
+	ovnServer := ovnmcp.NewMCPServer(k8sMcpServer)
+	log.Println("Adding OVN tools to OVN-K MCP server")
+	ovnServer.AddTools(server)
 
 	ovsServer := ovsmcp.NewMCPServer(k8sMcpServer)
 	log.Println("Adding OVS tools to OVN-K MCP server")
