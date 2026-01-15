@@ -1,0 +1,42 @@
+_uuid               : 507eb871-13d0-4b4b-9495-cf6601000a72
+action              : allow
+direction           : from-lport
+external_ids        : {direction=Egress, "k8s.ovn.org/id"="default-network-controller:UDNIsolation:AllowHostARPPrimaryUDN:Egress"}
+label               : 0
+log                 : false
+match               : "inport == @a8747502060113802905 && (( arp && arp.tpa == 10.244.0.2 ))"
+meter               : acl-logging
+name                : []
+options             : {}
+priority            : 1001
+severity            : []
+tier                : 0
+
+_uuid               : 0a962251-f578-44b5-9f71-6e6325e18518
+action              : allow
+direction           : to-lport
+external_ids        : {direction=Ingress, "k8s.ovn.org/id"="default-network-controller:UDNIsolation:AllowHostARPPrimaryUDN:Ingress"}
+label               : 0
+log                 : false
+match               : "outport == @a8747502060113802905 && (( arp && arp.spa == 10.244.0.2 ))"
+meter               : acl-logging
+name                : []
+options             : {}
+priority            : 1001
+severity            : []
+tier                : 0
+
+_uuid               : ac2b8152-8fbc-4f81-960b-9812df57b593
+action              : drop
+direction           : to-lport
+external_ids        : {direction=Ingress, "k8s.ovn.org/id"="default-network-controller:UDNIsolation:DenyPrimaryUDN:Ingress"}
+label               : 0
+log                 : false
+match               : "outport == @a8747502060113802905"
+meter               : acl-logging
+name                : []
+options             : {}
+priority            : 500
+severity            : []
+tier                : 0
+

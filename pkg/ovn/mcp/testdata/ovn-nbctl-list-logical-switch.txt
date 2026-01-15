@@ -1,0 +1,39 @@
+_uuid               : 7a8b9c0d-1234-5678-9abc-def012345678
+acls                : []
+copp                : []
+dns_records         : []
+external_ids        : {k8s-cluster-router=ovn_cluster_router, k8s-ls-name=ovn-worker}
+forwarding_groups   : []
+load_balancer       : [1111-2222-3333-4444, 5555-6666-7777-8888]
+load_balancer_group : []
+name                : ovn-worker
+other_config        : {exclude_ips="10.244.0.2", subnet="10.244.0.0/24"}
+ports               : [aaaa-bbbb-cccc-dddd, eeee-ffff-0000-1111]
+qos_rules           : []
+
+_uuid               : 1234abcd-5678-efgh-ijkl-mnopqrstuvwx
+acls                : []
+copp                : []
+dns_records         : []
+external_ids        : {}
+forwarding_groups   : []
+load_balancer       : []
+load_balancer_group : []
+name                : join
+other_config        : {}
+ports               : [2222-3333-4444-5555]
+qos_rules           : []
+
+_uuid               : abcd1234-5678-9abc-def0-123456789abc
+acls                : []
+copp                : []
+dns_records         : []
+external_ids        : {k8s-cluster-router=ovn_cluster_router, k8s-ls-name=ovn-control-plane}
+forwarding_groups   : []
+load_balancer       : [1111-2222-3333-4444]
+load_balancer_group : []
+name                : ovn-control-plane
+other_config        : {exclude_ips="10.244.1.2", subnet="10.244.1.0/24"}
+ports               : [6666-7777-8888-9999]
+qos_rules           : []
+
