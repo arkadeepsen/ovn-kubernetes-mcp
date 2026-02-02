@@ -42,15 +42,17 @@ undeploy-kind-ovnk:
 NVM_VERSION := 0.40.3
 NODE_VERSION := 22.20.0
 NPM_VERSION := 11.6.1
+MCP_MODE ?= live-cluster
 
 .PHONY: run-e2e
 run-e2e:
-	./hack/run-e2e.sh $(NVM_VERSION) $(NODE_VERSION) $(NPM_VERSION)
+	./hack/run-e2e.sh $(NVM_VERSION) $(NODE_VERSION) $(NPM_VERSION) "$(MCP_MODE)"
 
 .PHONY: test-e2e
-test-e2e: build deploy-kind-ovnk
+test-e2e: build
+	if [ "$(MCP_MODE)" = "live-cluster" ]; then $(MAKE) deploy-kind-ovnk || exit 1; fi; \
 	$(MAKE) run-e2e || EXIT_CODE=$$?; \
-	$(MAKE) undeploy-kind-ovnk; \
+	if [ "$(MCP_MODE)" = "live-cluster" ]; then $(MAKE) undeploy-kind-ovnk || exit 1; fi; \
 	exit $${EXIT_CODE:-0}
 
 .PHONY: lint

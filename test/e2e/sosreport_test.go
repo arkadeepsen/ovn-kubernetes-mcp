@@ -16,11 +16,11 @@ import (
 func getTestdataSosreportPath() string {
 	_, thisFile, _, ok := runtime.Caller(0)
 	if !ok {
-		panic("failed to get current file path")
+		Expect(ok).To(BeTrue())
 	}
 	path, err := filepath.Abs(filepath.Join(filepath.Dir(thisFile), "../../pkg/sosreport/mcp/testdata/sosreport"))
 	if err != nil {
-		panic(err)
+		Expect(err).NotTo(HaveOccurred())
 	}
 	return path
 }
@@ -36,7 +36,7 @@ var _ = Describe("[offline] Sosreport Tools", func() {
 	)
 
 	DescribeTable("List Plugins",
-		func(sosreportPath string, shouldFail bool, expectedPluginCount int) {
+		func(sosreportPath string, shouldFail bool) {
 			By("Calling sos-list-plugins")
 			output, err := mcpInspector.
 				MethodCall(sosListPluginsToolName, map[string]string{
@@ -51,7 +51,7 @@ var _ = Describe("[offline] Sosreport Tools", func() {
 
 				By("Checking the result")
 				result := utils.UnmarshalCallToolResult[sostypes.ListPluginsResult](output)
-				Expect(result.Plugins).To(HaveLen(expectedPluginCount))
+				Expect(result.Plugins).To(HaveLen(3))
 				Expect(result.TotalCommands).To(Equal(3))
 
 				// Verify plugin names and command counts
@@ -64,8 +64,8 @@ var _ = Describe("[offline] Sosreport Tools", func() {
 				Expect(pluginMap["container_log"]).To(Equal(0))
 			}
 		},
-		Entry("should list all enabled plugins with command counts", testdataSosreportPath, false, 3),
-		Entry("should fail with non-existent sosreport path", "/path/that/does/not/exist", true, 0),
+		Entry("should list all enabled plugins with command counts", testdataSosreportPath, false),
+		Entry("should fail with non-existent sosreport path", "/path/that/does/not/exist", true),
 	)
 
 	DescribeTable("List Commands",

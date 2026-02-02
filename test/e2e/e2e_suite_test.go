@@ -37,6 +37,8 @@ import (
 const (
 	mcpServerPathEnvVar = "MCP_SERVER_PATH"
 	kubeconfigEnvVar    = "KUBECONFIG"
+	mcpModeEnvVar       = "MCP_MODE"
+	mcpModeOffline      = "offline"
 )
 
 var (
@@ -90,6 +92,19 @@ func TestE2e(t *testing.T) {
 var _ = BeforeSuite(func() {
 	mcpServerPath := os.Getenv(mcpServerPathEnvVar)
 	Expect(mcpServerPath).NotTo(BeEmpty())
+
+	mcpMode := os.Getenv(mcpModeEnvVar)
+	Expect(mcpMode).NotTo(BeEmpty())
+	if mcpMode == mcpModeOffline {
+		// Offline mode - configure MCP inspector without kubeconfig
+		mcpInspector = inspector.NewMCPInspector().
+			Command(mcpServerPath).
+			CommandFlags(map[string]string{
+				"mode": "offline",
+			})
+		return
+	}
+
 	kubeconfig := os.Getenv(kubeconfigEnvVar)
 	Expect(kubeconfig).NotTo(BeEmpty())
 

@@ -5,9 +5,15 @@
 NVM_VERSION=$1
 NODE_VERSION=$2
 NPM_VERSION=$3
+MCP_MODE=$4
 
 if [[ -z "${NVM_VERSION}" ]] || [[ -z "${NODE_VERSION}" ]] || [[ -z "${NPM_VERSION}" ]]; then
     echo "NVM_VERSION, NODE_VERSION and NPM_VERSION are required"
+    exit 1
+fi
+
+if [[ "${MCP_MODE}" != "offline" && "${MCP_MODE}" != "live-cluster" && -n "${MCP_MODE}" ]]; then
+    echo "Invalid MCP_MODE: ${MCP_MODE}. Must be 'offline' or 'live-cluster'"
     exit 1
 fi
 
@@ -40,4 +46,11 @@ echo "Dependencies installed"
 
 # Run e2e tests
 echo "Running e2e tests"
-ginkgo -vv test/e2e
+if [[ "${MCP_MODE}" == "offline" ]]; then
+    echo "Running offline mode tests (sosreport and must-gather)"
+    export MCP_MODE="offline"
+    ginkgo -vv --focus="\[offline\]" test/e2e
+else
+    echo "Running live-cluster mode tests (excluding offline tests)"
+    ginkgo -vv --skip="\[offline\]" test/e2e
+fi
