@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/sosreport/types"
 )
 
@@ -122,7 +123,9 @@ func searchCommands(sosreportPath, pattern string, maxResults int) (types.Search
 		return types.SearchCommandsResult{}, fmt.Errorf("invalid search pattern: %w", err)
 	}
 
-	var result types.SearchCommandsResult
+	result := types.SearchCommandsResult{
+		Matches: []types.CommandMatch{},
+	}
 	if maxResults <= 0 {
 		maxResults = defaultResultLimit
 	}
