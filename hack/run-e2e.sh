@@ -52,5 +52,6 @@ if [[ "${MCP_MODE}" == "offline" ]]; then
     ginkgo -vv --focus="\[offline\]" test/e2e
 else
     echo "Running live-cluster mode tests (excluding offline tests)"
+    export MCP_MODE="live-cluster"
     ginkgo -vv --skip="\[offline\]" test/e2e
 fi
