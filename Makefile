@@ -20,6 +20,30 @@ GOPATH ?= $(shell go env GOPATH)
 build:
 	go build -o $(MCP_SERVER_PATH) cmd/ovnk-mcp-server/main.go
 
+# Container image build targets (use IMAGE to override tag, e.g. make build-image IMAGE=quay.io/myorg/ovnk-mcp-server:v1.0)
+IMAGE ?= localhost/ovnk-mcp-server:dev
+export IMAGE
+GOLANG_IMAGE ?= quay.io/projectquay/golang
+GOLANG_VERSION ?= 1.24
+
+.PHONY: build-image
+build-image:
+	$(CONTAINER_RUNTIME) build -f Dockerfile \
+		--build-arg GOLANG_IMAGE=$(GOLANG_IMAGE) \
+		--build-arg GOLANG_VERSION=$(GOLANG_VERSION) \
+		-t $(IMAGE) .
+
+.PHONY: deploy-k8s
+deploy-k8s:
+	@mkdir -p _output/kustomize-deploy
+	IMAGE='$(IMAGE)' envsubst '$$IMAGE' < config/image-patch.yaml.tpl > _output/kustomize-deploy/image-patch.yaml
+	cp config/kustomization.deploy.yaml.tpl _output/kustomize-deploy/kustomization.yaml
+	kubectl kustomize _output/kustomize-deploy | kubectl apply -f -
+
+.PHONY: undeploy-k8s undeploy
+undeploy-k8s undeploy:
+	kubectl delete -k config/
+
 .PHONY: clean
 clean:
 	rm -Rf _output/
