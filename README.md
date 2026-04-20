@@ -44,6 +44,7 @@ The server currently supports 2 transport modes: `stdio` and `http`.
 | `--pwru-image` | `docker.io/cilium/pwru:v1.0.10` | Container image for the **pwru** network tool (kernel packet tracing). |
 | `--tcpdump-image` | `nicolaka/netshoot:v0.15`       | Container image for the **tcpdump** network tool (packet capture). |
 | `--kernel-image` | `nicolaka/netshoot:v0.15`       | Container image for kernel tools (conntrack, ip, iptables, nft). |
+| `--tool-timeout` | `120`                           | Timeout in seconds for tool operations. Set to `0` to disable. |
 
 ### Live Cluster Mode
 
