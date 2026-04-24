@@ -2,6 +2,8 @@ package mcp
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/types"
@@ -40,4 +42,18 @@ func (s *MCPServer) ExecPod(ctx context.Context, req *mcp.CallToolRequest, in ty
 	}
 
 	return nil, types.ExecPodResult{Stdout: stdout, Stderr: stderr}, nil
+}
+
+// RunCommand runs a command on a pod by name and namespace.
+func (s *MCPServer) RunCommand(ctx context.Context, req *mcp.CallToolRequest, namespacedName types.NamespacedNameParams,
+	commands []string) ([]string, error) {
+	_, result, err := s.ExecPod(ctx, req, types.ExecPodParams{NamespacedNameParams: namespacedName, Command: commands})
+	if err != nil {
+		return nil, err
+	}
+	if result.Stderr != "" {
+		return nil, fmt.Errorf("error occurred while running command %v on pod %s/%s: %s", commands, namespacedName.Namespace,
+			namespacedName.Name, result.Stderr)
+	}
+	return utils.StripEmptyLines(strings.Split(result.Stdout, "\n")), nil
 }
