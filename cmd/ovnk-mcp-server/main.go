@@ -17,7 +17,7 @@ import (
 	mcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	kernelmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/mcp"
 	kubernetesmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kubernetes/mcp"
-	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/middleware"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/middleware/timeout"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/middleware/toolfilter"
 	mustgathermcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/must-gather/mcp"
 	nettoolsmcp "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/network-tools/mcp"
@@ -98,7 +98,7 @@ func main() {
 
 	// Apply timeout middleware to all tool calls if configured.
 	if serverCfg.ToolTimeout > 0 {
-		ovnkMcpServer.AddReceivingMiddleware(middleware.ToolTimeout(serverCfg.ToolTimeout))
+		ovnkMcpServer.AddReceivingMiddleware(timeout.ToolTimeout(serverCfg.ToolTimeout))
 	}
 
 	// Hide tools/categories that the operator opted out of. Filtering happens
