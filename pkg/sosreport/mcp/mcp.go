@@ -77,7 +77,7 @@ with their plugin, exec string, and filepath. Does NOT return file contents.
 Examples:
 - pattern='iptables' finds all iptables-related commands
 - pattern='ovn.*show' finds OVN show commands
-- pattern='journalctl.*kubelet' finds kubelet journal logs`, defaultResultLimit),
+- pattern='journalctl.*kubelet' finds kubelet journal logs`, DefaultMaxResults),
 		}, s.SearchCommands)
 
 	// Get command output
@@ -90,36 +90,44 @@ Parameters:
 - sosreport_path (required): Path to extracted sosreport directory
 - filepath (required): Relative filepath from sos-list-commands or sos-search-commands
 - pattern (optional): Regex pattern to filter output lines
-- max_lines (optional): Maximum lines to return (default: %d)
+- head (optional): Return only first N lines. Default: %d lines if tail is not specified
+- tail (optional): Return only last N lines
+- apply_tail_first (optional): If both head and tail are set and apply_tail_first is true,
+apply tail before head. Default: false
 
 Use the filepath returned by sos-list-commands or sos-search-commands to retrieve
 the actual command output. Supports optional grep-style filtering.
 
 Example:
 - filepath='sos_commands/openvswitch/ovs-vsctl_-t_5_show'
-- filepath='sos_commands/firewall_tables/iptables_-vnxL', pattern='KUBE-'`, defaultResultLimit),
+- filepath='sos_commands/firewall_tables/iptables_-vnxL', pattern='KUBE-'`, DefaultMaxLines),
 		}, s.GetCommand)
 
-	// Search pod logs
+	// Get pod logs
 	mcp.AddTool(server,
 		&mcp.Tool{
-			Name: "sos-search-pod-logs",
-			Description: fmt.Sprintf(`Search Kubernetes pod container logs.
+			Name: "sos-get-pod-logs",
+			Description: fmt.Sprintf(`Get Kubernetes pod container logs from a sosreport.
 
 Parameters:
 - sosreport_path (required): Path to extracted sosreport directory
-- pattern (required): Regex pattern to search for in logs
-- pod_filter (optional): Filter to specific pod/namespace substring
-- max_results (optional): Maximum result lines to return (default: %d)
+- namespace (required): Pod namespace
+- name (required): Pod name
+- container (optional): Container name. If omitted, returns the first matching container log for the pod.
+- pattern (optional): Regex pattern to filter log lines (grep-style filtering)
+- head (optional): Return only first N lines. Default: %d lines if tail is not specified
+- tail (optional): Return only last N lines
+- apply_tail_first (optional): If both head and tail are set and apply_tail_first is true,
+apply tail before head. Default: false
 
-Searches container logs collected from /var/log/pods/. Returns matching log lines
-with the log file path.
+Reads container logs collected from the sosreport for the specified pod. Returns
+log lines with the log file path.
 
 Examples:
-- pattern='ERROR.*', pod_filter='ovnkube-node'
-- pattern='timeout|timed out', pod_filter='ovn'
-- pattern='failed to start'`, defaultResultLimit),
-		}, s.SearchPodLogs)
+- namespace='openshift-ovn-kubernetes', name='ovnkube-node-abc'
+- namespace='openshift-ovn-kubernetes', name='ovnkube-node-abc', container='ovnkube-controller'
+- namespace='openshift-ovn-kubernetes', name='ovnkube-node-abc', pattern='ERROR.*'`, DefaultMaxLines),
+		}, s.GetPodLogs)
 }
 
 // ListPlugins lists plugins with command counts
@@ -142,7 +150,10 @@ func (s *MCPServer) ListCommands(ctx context.Context, req *mcp.CallToolRequest, 
 
 // SearchCommands searches for commands across all plugins
 func (s *MCPServer) SearchCommands(ctx context.Context, req *mcp.CallToolRequest, in types.SearchCommandsParams) (*mcp.CallToolResult, types.SearchCommandsResult, error) {
-	result, err := searchCommands(in.SosreportPath, in.Pattern, in.MaxResults)
+	if in.Pattern == "" {
+		return nil, types.SearchCommandsResult{}, fmt.Errorf("pattern is required")
+	}
+	result, err := searchCommands(in.SosreportPath, in.PatternParams, in.MaxResults)
 	if err != nil {
 		return nil, types.SearchCommandsResult{}, err
 	}
@@ -151,18 +162,18 @@ func (s *MCPServer) SearchCommands(ctx context.Context, req *mcp.CallToolRequest
 
 // GetCommand retrieves command output by filepath
 func (s *MCPServer) GetCommand(ctx context.Context, req *mcp.CallToolRequest, in types.GetCommandParams) (*mcp.CallToolResult, types.GetCommandResult, error) {
-	output, err := getCommandOutput(in.SosreportPath, in.Filepath, in.Pattern, in.MaxLines)
+	output, err := getCommandOutput(in.SosreportPath, in.Filepath, in.PatternParams, in.HeadTailParams)
 	if err != nil {
 		return nil, types.GetCommandResult{}, err
 	}
 	return nil, types.GetCommandResult{Output: output}, nil
 }
 
-// SearchPodLogs searches pod logs using the manifest
-func (s *MCPServer) SearchPodLogs(ctx context.Context, req *mcp.CallToolRequest, in types.SearchPodLogsParams) (*mcp.CallToolResult, types.SearchPodLogsResult, error) {
-	output, err := searchPodLogs(in.SosreportPath, in.Pattern, in.PodFilter, in.MaxResults)
+// GetPodLogs retrieves pod logs using the manifest
+func (s *MCPServer) GetPodLogs(ctx context.Context, req *mcp.CallToolRequest, in types.GetPodLogsParams) (*mcp.CallToolResult, types.GetPodLogsResult, error) {
+	output, err := getPodLogs(in.SosreportPath, in.Namespace, in.Name, in.Container, in.PatternParams, in.HeadTailParams)
 	if err != nil {
-		return nil, types.SearchPodLogsResult{}, err
+		return nil, types.GetPodLogsResult{}, err
 	}
-	return nil, types.SearchPodLogsResult{Output: output}, nil
+	return nil, types.GetPodLogsResult{Output: output}, nil
 }

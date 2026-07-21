@@ -3,29 +3,32 @@ package sosreport
 import (
 	"strings"
 	"testing"
+
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/headtail"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/pattern"
 )
 
 const sosreportTestData = "testdata/sosreport"
 
 func TestGetCommandOutput(t *testing.T) {
 	tests := []struct {
-		name         string
-		sosreport    string
-		filepath     string
-		pattern      string
-		maxLines     int
-		wantError    bool
-		errorMsg     string
-		wantContains string
-		wantMinLines int
-		wantMaxLines int
+		name           string
+		sosreport      string
+		filepath       string
+		pattern        string
+		head           int
+		tail           int
+		wantError      bool
+		errorMsg       string
+		wantContains   string
+		wantMinLines   int
+		wantMaxLines   int
+		wantExactLines int
 	}{
 		{
 			name:         "get ovs-vsctl output without pattern",
 			sosreport:    sosreportTestData,
 			filepath:     "sos_commands/openvswitch/ovs-vsctl_-t_5_show",
-			pattern:      "",
-			maxLines:     0,
 			wantError:    false,
 			wantContains: "Bridge br-int",
 			wantMinLines: 1,
@@ -34,8 +37,6 @@ func TestGetCommandOutput(t *testing.T) {
 			name:         "get ovs-ofctl output without pattern",
 			sosreport:    sosreportTestData,
 			filepath:     "sos_commands/openvswitch/ovs-ofctl_dump-flows_br-int",
-			pattern:      "",
-			maxLines:     0,
 			wantError:    false,
 			wantContains: "cookie=0x0",
 			wantMinLines: 1,
@@ -44,8 +45,6 @@ func TestGetCommandOutput(t *testing.T) {
 			name:         "get ip addr show output",
 			sosreport:    sosreportTestData,
 			filepath:     "sos_commands/networking/ip_addr_show",
-			pattern:      "",
-			maxLines:     0,
 			wantError:    false,
 			wantContains: "lo:",
 			wantMinLines: 1,
@@ -55,27 +54,30 @@ func TestGetCommandOutput(t *testing.T) {
 			sosreport:    sosreportTestData,
 			filepath:     "sos_commands/networking/ip_addr_show",
 			pattern:      "NOTFOUND",
-			maxLines:     0,
 			wantError:    false,
 			wantContains: "No lines matching pattern",
 			wantMinLines: 1,
 		},
 		{
-			name:         "limit max lines",
-			sosreport:    sosreportTestData,
-			filepath:     "sos_commands/networking/ip_addr_show",
-			pattern:      "",
-			maxLines:     2,
-			wantError:    false,
-			wantContains: "output truncated",
-			wantMaxLines: 2,
+			name:           "limit with head",
+			sosreport:      sosreportTestData,
+			filepath:       "sos_commands/networking/ip_addr_show",
+			head:           2,
+			wantError:      false,
+			wantExactLines: 2,
+		},
+		{
+			name:           "limit with tail",
+			sosreport:      sosreportTestData,
+			filepath:       "sos_commands/networking/ip_addr_show",
+			tail:           2,
+			wantError:      false,
+			wantExactLines: 2,
 		},
 		{
 			name:      "non-existent file",
 			sosreport: sosreportTestData,
 			filepath:  "sos_commands/non-existent-file",
-			pattern:   "",
-			maxLines:  0,
 			wantError: true,
 			errorMsg:  "command output file not found",
 		},
@@ -83,8 +85,6 @@ func TestGetCommandOutput(t *testing.T) {
 			name:      "invalid sosreport path",
 			sosreport: "testdata/non-existent",
 			filepath:  "sos_commands/openvswitch/ovs-vsctl_-t_5_show",
-			pattern:   "",
-			maxLines:  0,
 			wantError: true,
 			errorMsg:  "sosreport path does not exist",
 		},
@@ -93,15 +93,16 @@ func TestGetCommandOutput(t *testing.T) {
 			sosreport: sosreportTestData,
 			filepath:  "sos_commands/networking/ip_addr_show",
 			pattern:   "[invalid(",
-			maxLines:  0,
 			wantError: true,
-			errorMsg:  "invalid pattern",
+			errorMsg:  "invalid search pattern",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			output, err := getCommandOutput(tt.sosreport, tt.filepath, tt.pattern, tt.maxLines)
+			output, err := getCommandOutput(tt.sosreport, tt.filepath,
+				pattern.PatternParams{Pattern: tt.pattern},
+				headtail.HeadTailParams{Head: tt.head, Tail: tt.tail})
 			if tt.wantError {
 				if err == nil {
 					t.Errorf("getCommandOutput() expected error but got nil")
@@ -115,17 +116,15 @@ func TestGetCommandOutput(t *testing.T) {
 				return
 			}
 
-			// Check for expected content
 			if tt.wantContains != "" && !strings.Contains(output, tt.wantContains) {
 				t.Errorf("getCommandOutput() output does not contain %q, got:\n%s", tt.wantContains, output)
 			}
 
-			// Check line count if specified (excluding truncation message and empty lines)
-			if tt.wantMinLines > 0 || tt.wantMaxLines > 0 {
+			if tt.wantMinLines > 0 || tt.wantMaxLines > 0 || tt.wantExactLines > 0 {
 				lines := strings.Split(output, "\n")
 				lineCount := 0
 				for _, line := range lines {
-					if line != "" && !strings.Contains(line, "output truncated") && !strings.HasPrefix(line, "...") {
+					if line != "" {
 						lineCount++
 					}
 				}
@@ -136,6 +135,10 @@ func TestGetCommandOutput(t *testing.T) {
 
 				if tt.wantMaxLines > 0 && lineCount > tt.wantMaxLines {
 					t.Errorf("getCommandOutput() got %d lines, want at most %d. Output:\n%s", lineCount, tt.wantMaxLines, output)
+				}
+
+				if tt.wantExactLines > 0 && lineCount != tt.wantExactLines {
+					t.Errorf("getCommandOutput() got %d lines, want exactly %d. Output:\n%s", lineCount, tt.wantExactLines, output)
 				}
 			}
 		})
@@ -329,7 +332,7 @@ func TestSearchCommands(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := searchCommands(tt.path, tt.pattern, tt.maxResults)
+			result, err := searchCommands(tt.path, pattern.PatternParams{Pattern: tt.pattern}, tt.maxResults)
 			if tt.wantError {
 				if err == nil {
 					t.Errorf("searchCommands() expected error but got nil")

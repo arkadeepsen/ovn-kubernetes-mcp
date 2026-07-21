@@ -1,5 +1,10 @@
 package types
 
+import (
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/headtail"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/pattern"
+)
+
 // ListCommandsParams are the parameters for sos-list-commands
 type ListCommandsParams struct {
 	SosreportPath string `json:"sosreport_path"`
@@ -22,8 +27,8 @@ type CommandSummary struct {
 // SearchCommandsParams are the parameters for sos-search-commands
 type SearchCommandsParams struct {
 	SosreportPath string `json:"sosreport_path"`
-	Pattern       string `json:"pattern"`
-	MaxResults    int    `json:"max_results,omitempty"`
+	pattern.PatternParams
+	MaxResults int `json:"max_results,omitempty"`
 }
 
 // SearchCommandsResult returns commands matching the pattern
@@ -43,8 +48,8 @@ type CommandMatch struct {
 type GetCommandParams struct {
 	SosreportPath string `json:"sosreport_path"`
 	Filepath      string `json:"filepath"`
-	Pattern       string `json:"pattern,omitempty"`
-	MaxLines      int    `json:"max_lines,omitempty"`
+	pattern.PatternParams
+	headtail.HeadTailParams
 }
 
 // GetCommandResult returns the command output

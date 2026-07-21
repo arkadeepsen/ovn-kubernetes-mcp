@@ -22,7 +22,7 @@ var toolsByCategory = map[string][]string{
 	"ovs":           {"ovs-vsctl", "ovs-ofctl", "ovs-appctl"},
 	"kernel":        {"get-conntrack", "get-iptables", "get-nft", "get-ip"},
 	"network-tools": {"tcpdump", "pwru"},
-	"sosreport":     {"sos-list-plugins", "sos-list-commands", "sos-search-commands", "sos-get-command", "sos-search-pod-logs"},
+	"sosreport":     {"sos-list-plugins", "sos-list-commands", "sos-search-commands", "sos-get-command", "sos-get-pod-logs"},
 	"must-gather":   {"must-gather-get-resource", "must-gather-list-resources", "must-gather-pod-logs", "must-gather-ovnk-info", "must-gather-list-northbound-databases", "must-gather-list-southbound-databases", "must-gather-query-database"},
 }
 

@@ -1,0 +1,2 @@
+2025-10-29T10:00:00.123456789Z stdout F I1029 10:00:00.123456       1 northd.go:10] Starting northd container
+2025-10-29T10:00:01.234567890Z stderr F E1029 10:00:01.234567       1 northd.go:20] ERROR: northd sync failed

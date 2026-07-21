@@ -5,18 +5,23 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"regexp"
+	"strings"
 
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/sosreport/types"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/headtail"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/pattern"
 )
 
 const (
-	// defaultResultLimit is the default maximum number of lines/results to return
-	defaultResultLimit = 100
+	// DefaultMaxLines is the default max lines returned when head/tail are unset.
+	DefaultMaxLines = 100
+	// DefaultMaxResults is the default max matches for sos-search-commands.
+	DefaultMaxResults = 100
 )
 
 // getCommandOutput reads a command output file by filepath from manifest
-func getCommandOutput(sosreportPath, relativeFilepath, pattern string, maxLines int) (string, error) {
+func getCommandOutput(sosreportPath, relativeFilepath string, patternParams pattern.PatternParams, headTailParams headtail.HeadTailParams) (string, error) {
 	if err := validateSosreportPath(sosreportPath); err != nil {
 		return "", err
 	}
@@ -41,28 +46,23 @@ func getCommandOutput(sosreportPath, relativeFilepath, pattern string, maxLines 
 		}
 	}()
 
-	var searchPattern *regexp.Regexp
-	if pattern != "" {
-		searchPattern, err = regexp.Compile(pattern)
+	lines, err := patternParams.ExecuteWithMatch(func() ([]string, error) {
+		fileLines, err := readLines(file)
 		if err != nil {
-			return "", fmt.Errorf("invalid pattern: %w", err)
+			return nil, err
 		}
-	}
-
-	if maxLines <= 0 {
-		maxLines = defaultResultLimit
-	}
-
-	output, err := readWithLimit(file, searchPattern, maxLines)
+		return utils.StripEmptyLines(fileLines), nil
+	}, true)
 	if err != nil {
 		return "", err
 	}
 
-	if output == "" && pattern != "" {
-		return fmt.Sprintf("No lines matching pattern %q found\n", pattern), nil
+	if len(lines) == 0 && patternParams.Pattern != "" {
+		return fmt.Sprintf("No lines matching pattern %q found\n", patternParams.Pattern), nil
 	}
 
-	return output, nil
+	lines = headTailParams.Apply(lines, DefaultMaxLines)
+	return strings.Join(lines, "\n"), nil
 }
 
 // listPlugins returns a list of enabled plugins with their command counts
@@ -118,27 +118,36 @@ func listCommands(sosreportPath, pluginName string) (types.ListCommandsResult, e
 }
 
 // searchCommands searches for commands matching a pattern across all plugins
-func searchCommands(sosreportPath, pattern string, maxResults int) (types.SearchCommandsResult, error) {
+func searchCommands(sosreportPath string, patternParams pattern.PatternParams, maxResults int) (types.SearchCommandsResult, error) {
 	manifest, err := loadManifest(sosreportPath)
 	if err != nil {
 		return types.SearchCommandsResult{}, err
-	}
-
-	searchPattern, err := regexp.Compile(pattern)
-	if err != nil {
-		return types.SearchCommandsResult{}, fmt.Errorf("invalid search pattern: %w", err)
 	}
 
 	result := types.SearchCommandsResult{
 		Matches: []types.CommandMatch{},
 	}
 	if maxResults <= 0 {
-		maxResults = defaultResultLimit
+		maxResults = DefaultMaxResults
 	}
 
 	for pluginName, plugin := range manifest.Components.Report.Plugins {
 		for _, cmd := range plugin.Commands {
-			if searchPattern.MatchString(cmd.Exec) || searchPattern.MatchString(cmd.Filepath) {
+			execMatches, err := patternParams.ExecuteWithMatch(func() ([]string, error) {
+				return []string{cmd.Exec}, nil
+			}, true)
+			if err != nil {
+				return types.SearchCommandsResult{}, err
+			}
+
+			filepathMatches, err := patternParams.ExecuteWithMatch(func() ([]string, error) {
+				return []string{cmd.Filepath}, nil
+			}, true)
+			if err != nil {
+				return types.SearchCommandsResult{}, err
+			}
+
+			if len(execMatches) == 1 || len(filepathMatches) == 1 {
 				result.Matches = append(result.Matches, types.CommandMatch{
 					Plugin:   pluginName,
 					Exec:     cmd.Exec,

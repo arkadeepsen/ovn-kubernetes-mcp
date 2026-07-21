@@ -22,7 +22,7 @@ var _ = Describe("[offline] Sosreport Tools", func() {
 		sosListCommandsToolName   = "sos-list-commands"
 		sosSearchCommandsToolName = "sos-search-commands"
 		sosGetCommandToolName     = "sos-get-command"
-		sosSearchPodLogsToolName  = "sos-search-pod-logs"
+		sosGetPodLogsToolName     = "sos-get-pod-logs"
 	)
 
 	DescribeTable("List Plugins",
@@ -203,53 +203,132 @@ var _ = Describe("[offline] Sosreport Tools", func() {
 		}
 	})
 
-	DescribeTable("Search Pod Logs",
-		func(pattern string, podFilter string, expectedSubstrings []string) {
+	It("Get Command should apply head and tail limits", func() {
+		By("Calling sos-get-command with head=2")
+		headOutput, err := mcpInspector.
+			MethodCall(sosGetCommandToolName, map[string]any{
+				"sosreport_path": testdataSosreportPath,
+				"filepath":       "sos_commands/networking/ip_addr_show",
+				"head":           2,
+			}).Execute()
+		Expect(err).NotTo(HaveOccurred())
+
+		headResult := utils.UnmarshalCallToolResult[sostypes.GetCommandResult](headOutput)
+		headLines := strings.Split(strings.TrimSpace(headResult.Output), "\n")
+		Expect(headLines).To(HaveLen(2))
+
+		By("Calling sos-get-command with tail=2")
+		tailOutput, err := mcpInspector.
+			MethodCall(sosGetCommandToolName, map[string]any{
+				"sosreport_path": testdataSosreportPath,
+				"filepath":       "sos_commands/networking/ip_addr_show",
+				"tail":           2,
+			}).Execute()
+		Expect(err).NotTo(HaveOccurred())
+
+		tailResult := utils.UnmarshalCallToolResult[sostypes.GetCommandResult](tailOutput)
+		tailLines := strings.Split(strings.TrimSpace(tailResult.Output), "\n")
+		Expect(tailLines).To(HaveLen(2))
+		Expect(tailResult.Output).NotTo(Equal(headResult.Output))
+	})
+
+	DescribeTable("Get Pod Logs",
+		func(pattern string, namespace string, name string, container string, expectedSubstrings []string, unexpectedSubstrings []string) {
 			params := map[string]any{
 				"sosreport_path": testdataSosreportPath,
-				"pattern":        pattern,
+				"namespace":      namespace,
+				"name":           name,
 			}
-			if podFilter != "" {
-				params["pod_filter"] = podFilter
+			if pattern != "" {
+				params["pattern"] = pattern
+			}
+			if container != "" {
+				params["container"] = container
 			}
 
-			By("Calling sos-search-pod-logs")
+			By("Calling sos-get-pod-logs")
 			output, err := mcpInspector.
-				MethodCall(sosSearchPodLogsToolName, params).Execute()
+				MethodCall(sosGetPodLogsToolName, params).Execute()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(output).NotTo(BeEmpty())
 
 			By("Checking the result")
-			result := utils.UnmarshalCallToolResult[sostypes.SearchPodLogsResult](output)
+			result := utils.UnmarshalCallToolResult[sostypes.GetPodLogsResult](output)
 
-			// Verify all expected substrings are present
 			for _, expected := range expectedSubstrings {
 				Expect(result.Output).To(ContainSubstring(expected))
 			}
+			for _, unexpected := range unexpectedSubstrings {
+				Expect(result.Output).NotTo(ContainSubstring(unexpected))
+			}
 		},
-		Entry("should search for ERROR pattern in pod logs",
-			"ERROR",
+		Entry("should get first container logs when container omitted",
 			"",
+			"openshift-ovn-kubernetes",
+			"ovnkube-node-abc",
+			"",
+			[]string{
+				"Starting ovnkube-controller",
+				"Successfully connected to ovn-controller",
+			},
+			[]string{"northd"},
+		),
+		Entry("should get specific container logs",
+			"",
+			"openshift-ovn-kubernetes",
+			"ovnkube-node-abc",
+			"northd",
+			[]string{
+				"Starting northd container",
+			},
+			[]string{"Starting ovnkube-controller"},
+		),
+		Entry("should filter pod logs by ERROR pattern",
+			"ERROR",
+			"openshift-ovn-kubernetes",
+			"ovnkube-node-abc",
+			"ovnkube-controller",
 			[]string{
 				"ERROR",
 				"Failed to connect to ovn-controller",
-				"ovnkube-node",
 			},
+			nil,
 		),
-		Entry("should search pod logs with pod filter",
-			"ovnkube",
-			"ovnkube-node",
-			[]string{
-				"ovnkube-node",
-				"Starting ovnkube-node",
-			},
-		),
-		Entry("should search for successful connection in pod logs",
+		Entry("should filter pod logs by successful connection",
 			"Successfully connected",
+			"openshift-ovn-kubernetes",
+			"ovnkube-node-abc",
 			"",
 			[]string{
 				"Successfully connected to ovn-controller",
 			},
+			nil,
 		),
 	)
+
+	It("Get Pod Logs should require name", func() {
+		By("Calling sos-get-pod-logs without name")
+		output, err := mcpInspector.
+			MethodCall(sosGetPodLogsToolName, map[string]any{
+				"sosreport_path": testdataSosreportPath,
+				"namespace":      "openshift-ovn-kubernetes",
+			}).Execute()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(output)).To(ContainSubstring(`"isError": true`))
+		Expect(string(output)).To(ContainSubstring(`missing properties`))
+		Expect(string(output)).To(ContainSubstring(`name`))
+	})
+
+	It("Get Pod Logs should require namespace", func() {
+		By("Calling sos-get-pod-logs without namespace")
+		output, err := mcpInspector.
+			MethodCall(sosGetPodLogsToolName, map[string]any{
+				"sosreport_path": testdataSosreportPath,
+				"name":           "ovnkube-node-abc",
+			}).Execute()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(output)).To(ContainSubstring(`"isError": true`))
+		Expect(string(output)).To(ContainSubstring(`missing properties`))
+		Expect(string(output)).To(ContainSubstring(`namespace`))
+	})
 })

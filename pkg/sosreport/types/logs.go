@@ -1,14 +1,21 @@
 package types
 
-// SearchPodLogsParams are the parameters for sos-search-pod-logs
-type SearchPodLogsParams struct {
+import (
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/headtail"
+	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/utils/pattern"
+)
+
+// GetPodLogsParams are the parameters for sos-get-pod-logs
+type GetPodLogsParams struct {
 	SosreportPath string `json:"sosreport_path"`
-	Pattern       string `json:"pattern"`
-	PodFilter     string `json:"pod_filter,omitempty"`
-	MaxResults    int    `json:"max_results,omitempty"`
+	Name          string `json:"name"`
+	Namespace     string `json:"namespace"`
+	Container     string `json:"container,omitempty"`
+	pattern.PatternParams
+	headtail.HeadTailParams
 }
 
-// SearchPodLogsResult returns matching pod log lines
-type SearchPodLogsResult struct {
+// GetPodLogsResult returns matching pod log lines
+type GetPodLogsResult struct {
 	Output string `json:"output"`
 }
