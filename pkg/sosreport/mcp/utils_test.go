@@ -2,14 +2,11 @@ package sosreport
 
 import (
 	"os"
-	"regexp"
-	"strings"
 	"testing"
 )
 
-func TestReadWithLimit(t *testing.T) {
-	// Create a temporary test file
-	tmpfile, err := os.CreateTemp("", "test-readwithlimit-*.txt")
+func TestReadLines(t *testing.T) {
+	tmpfile, err := os.CreateTemp("", "test-readlines-*.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,7 +17,6 @@ func TestReadWithLimit(t *testing.T) {
 		}
 	}()
 
-	// Write test content
 	testContent := `line 1: ERROR occurred
 line 2: INFO message
 line 3: ERROR again
@@ -41,50 +37,16 @@ line 10: DEBUG more
 	}
 
 	tests := []struct {
-		name        string
-		pattern     string
-		maxLines    int
-		wantLines   int
-		wantPattern string
-		wantTrunc   bool
+		name      string
+		wantLines int
+		wantFirst string
+		wantLast  string
 	}{
 		{
-			name:      "no pattern, no limit",
-			pattern:   "",
-			maxLines:  0,
+			name:      "reads all lines",
 			wantLines: 10,
-			wantTrunc: false,
-		},
-		{
-			name:      "no pattern, with limit",
-			pattern:   "",
-			maxLines:  5,
-			wantLines: 5,
-			wantTrunc: true,
-		},
-		{
-			name:        "with pattern, no limit",
-			pattern:     "ERROR",
-			maxLines:    0,
-			wantLines:   5,
-			wantPattern: "ERROR",
-			wantTrunc:   false,
-		},
-		{
-			name:        "with pattern, with limit",
-			pattern:     "ERROR",
-			maxLines:    3,
-			wantLines:   3,
-			wantPattern: "ERROR",
-			wantTrunc:   true,
-		},
-		{
-			name:        "pattern with no matches returns empty",
-			pattern:     "NOTFOUND",
-			maxLines:    0,
-			wantLines:   0,
-			wantPattern: "NOTFOUND",
-			wantTrunc:   false,
+			wantFirst: "line 1: ERROR occurred",
+			wantLast:  "line 10: DEBUG more",
 		},
 	}
 
@@ -101,52 +63,22 @@ line 10: DEBUG more
 				}
 			}()
 
-			var searchPattern *regexp.Regexp
-			if tt.pattern != "" {
-				searchPattern = regexp.MustCompile(tt.pattern)
-			}
-
-			result, err := readWithLimit(file, searchPattern, tt.maxLines)
+			lines, err := readLines(file)
 			if err != nil {
-				t.Errorf("readWithLimit() unexpected error = %v", err)
+				t.Errorf("readLines() unexpected error = %v", err)
 				return
 			}
 
-			// Count lines (excluding truncation message and empty lines)
-			lines := strings.Split(result, "\n")
-			actualLines := 0
-			for _, line := range lines {
-				if line != "" && !strings.Contains(line, "output truncated") && !strings.HasPrefix(line, "...") {
-					actualLines++
+			if len(lines) != tt.wantLines {
+				t.Errorf("readLines() got %d lines, want %d", len(lines), tt.wantLines)
+			}
+			if len(lines) > 0 {
+				if lines[0] != tt.wantFirst {
+					t.Errorf("readLines() first line = %q, want %q", lines[0], tt.wantFirst)
 				}
-			}
-
-			// If wantLines is 0, we expect empty string
-			if tt.wantLines == 0 && result != "" {
-				t.Errorf("readWithLimit() expected empty result but got %q", result)
-				return
-			}
-
-			if tt.wantLines > 0 && actualLines != tt.wantLines {
-				t.Errorf("readWithLimit() got %d lines, want %d lines. Result:\n%s", actualLines, tt.wantLines, result)
-			}
-
-			// Check if all lines match the pattern (if pattern is specified)
-			if tt.wantPattern != "" && tt.wantLines > 0 {
-				for _, line := range lines {
-					if line != "" && !strings.Contains(line, "output truncated") && !strings.Contains(line, tt.wantPattern) {
-						t.Errorf("readWithLimit() line %q does not contain pattern %q", line, tt.wantPattern)
-					}
+				if lines[len(lines)-1] != tt.wantLast {
+					t.Errorf("readLines() last line = %q, want %q", lines[len(lines)-1], tt.wantLast)
 				}
-			}
-
-			// Check for truncation message
-			hasTruncMsg := strings.Contains(result, "output truncated")
-			if tt.wantTrunc && !hasTruncMsg {
-				t.Errorf("readWithLimit() expected truncation message but didn't find it")
-			}
-			if !tt.wantTrunc && hasTruncMsg {
-				t.Errorf("readWithLimit() unexpected truncation message")
 			}
 		})
 	}

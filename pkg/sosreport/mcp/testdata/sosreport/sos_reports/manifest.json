@@ -30,7 +30,9 @@
           "files": [
             {
               "files_copied": [
-                "host/var/log/pods/openshift-ovn-kubernetes_ovnkube-node-abc/ovnkube-node/0.log"
+                "host/var/log/containers/ovnkube-node-abc_openshift-ovn-kubernetes_ovnkube-controller-deadbeef01.log",
+                "host/var/log/containers/ovnkube-node-abc_openshift-ovn-kubernetes_northd-cafebabe02.log",
+                "host/var/log/containers/ovnkube-control-plane-xyz_openshift-ovn-kubernetes_ovnkube-cluster-manager-feedface03.log"
               ]
             }
           ]

@@ -1,0 +1,2 @@
+2025-10-29T10:00:00.123456789Z stdout F I1029 10:00:00.123456       1 ovnkube.go:123] Starting ovnkube-cluster-manager
+2025-10-29T10:00:02.345678901Z stderr F E1029 10:00:02.345678       1 ovnkube.go:789] ERROR: Cluster manager failed cluster sync

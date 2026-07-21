@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 )
 
@@ -40,9 +39,8 @@ func validateRelativePath(relPath string) error {
 	return nil
 }
 
-// readWithLimit reads from a reader with a line limit
-func readWithLimit(reader io.Reader, pattern *regexp.Regexp, maxLines int) (string, error) {
-	var result strings.Builder
+// readLines reads all lines from a reader using a large scanner buffer for long sos lines.
+func readLines(reader io.Reader) ([]string, error) {
 	scanner := bufio.NewScanner(reader)
 
 	// Increase buffer size for long lines
@@ -51,24 +49,14 @@ func readWithLimit(reader io.Reader, pattern *regexp.Regexp, maxLines int) (stri
 	// the maximum size - 1M
 	scanner.Buffer(buf, 1024*1024)
 
-	lineCount := 0
+	var lines []string
 	for scanner.Scan() {
-		if pattern == nil || pattern.MatchString(scanner.Text()) {
-			result.WriteString(scanner.Text())
-			result.WriteString("\n")
-			lineCount++
-		}
-
-		if maxLines > 0 && lineCount >= maxLines {
-			fmt.Fprintf(&result, "\n... (output truncated at %d lines)\n", maxLines)
-			break
-		}
-
+		lines = append(lines, scanner.Text())
 	}
 
 	if err := scanner.Err(); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return result.String(), nil
+	return lines, nil
 }

@@ -330,7 +330,7 @@ Available when running with `--mode offline` or `--mode dual`. No cluster access
 | | `sos-list-commands` | List all commands collected by a specific sosreport plugin. |
 | | `sos-search-commands` | Search for commands across all plugins by pattern. |
 | | `sos-get-command` | Get command output using filepath from manifest. |
-| | `sos-search-pod-logs` | Search Kubernetes pod container logs. |
+| | `sos-get-pod-logs` | Get Kubernetes pod container logs from a sosreport. |
 | **must-gather** | `must-gather-get-resource` | Get a specific Kubernetes resource from a must-gather archive. |
 | | `must-gather-list-resources` | List Kubernetes resources of a specific kind from a must-gather archive. |
 | | `must-gather-pod-logs` | Get container logs from a pod in a must-gather archive. |
