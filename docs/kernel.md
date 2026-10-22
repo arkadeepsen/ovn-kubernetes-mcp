@@ -132,9 +132,25 @@ Lists routing, network devices, and interfaces via `ip`.
 |-----------|------|----------|---------|-------------|
 | `node` | string | **yes** | — | Name of the node on which ip command is expected to be executed |
 | `namespace` | string | no | `"default"` | Namespace of the debug pod on which ip command is expected to be executed |
-| `options` | string | no | — | These options helps in providing more details or formatting output data. `-d`/`-details`: Output more detailed information. `-4`: shortcut for `-family inet`. `-6`: shortcut for `-family inet6`. `-r`/`-resolve`: use the system's name resolver to print DNS names instead of host addresses. `-n`/`-netns <NETNS>`: switches ip to the specified network namespace NETNS. `-a`/`-all`: executes specified command over all objects, it depends if command supports this option |
+| `options` | string | no | — | Diagnostic global options for details, output formatting, protocol family, and network namespace (see below) |
 | `command` | string | **yes** | — | These options specify the desired action to perform. Only one of them can be specified on the command line unless otherwise stated below. `address show`: protocol (IP or IPv6) address on a device. `link show`: network device. `neighbour show`: manage ARP or NDISC cache entries. `netns show`: manage network namespaces. `route show`: routing table entry. `rule show`: rule in routing policy database. `vrf show`: manage virtual routing and forwarding devices. `xfrm state list`: show Security Association Database. `xfrm policy list`: show Security Policy Database |
 | `filter_parameters` | string | no | — | This allows to mention sub command to get more filtered data. Available sub command varies and supportability depends on what is already supported with `ip` utility |
+
+Accepted global options follow the [ip(8) manual](https://man7.org/linux/man-pages/man8/ip.8.html):
+
+| Options | Purpose |
+|---------|---------|
+| `-d`/`-details`, `-s`/`-stats`/`-statistics` | Details and statistics; repeat `-s` for more statistics |
+| `-o`/`-oneline`, `-j`/`-json`, `-p`/`-pretty`, `-br`/`-brief` | Output formatting |
+| `-h`/`-human`/`-human-readable`, `-iec`, `-N`/`-Numeric`, `-r`/`-resolve` | Units and name resolution |
+| `-a`/`-all`, `-t`/`-timestamp`, `-ts`/`-tshort` | All objects and timestamps, where supported by the command |
+| `-c`/`-color[=always\|auto\|never]` | Color output |
+| `-4`, `-6`, `-0`, `-B`, `-M` | IPv4, IPv6, link, bridge, or MPLS family |
+| `-f`/`-family FAMILY` | Family: `inet`, `inet6`, `link`, `bridge`, or `mpls` |
+| `-n`/`-netns NETNS` | Network namespace |
+| `-rc`/`-rcvbuf SIZE` | Netlink receive buffer size (unsigned 32-bit integer) |
+
+Use these exact names with one or two leading hyphens. Namespace, family, and buffer options require a separate value; only color accepts `=value`. Short flags must be separate (`-s -d`, not `-sd`). Batch mode, other options, and unlisted abbreviations are rejected before creating a debug pod.
 
 Also accepts common [`head` / `tail` / `apply_tail_first`](user-guide.md#head--tail-line-limiting) and [`timeout_seconds`](user-guide.md#per-call-timeout).
 

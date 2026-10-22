@@ -40,6 +40,49 @@ var _ = Describe("Kernel Tools", Ordered, func() {
 	}
 
 	Context("get-ip", func() {
+		DescribeTable("should preserve diagnostic global options",
+			func(options string, expected string) {
+				output, err := mcpInspector.MethodCall(getIPToolName, withNode(map[string]any{
+					"options": options, "command": "link show", "filter_parameters": "dev lo",
+				})).Execute()
+				Expect(err).NotTo(HaveOccurred())
+				result := utils.UnmarshalCallToolResult[types.Result](output)
+				Expect(result.Data).To(ContainSubstring(expected))
+			},
+			Entry("short detail and statistics options", "-s -d -o", "lo"),
+			Entry("long JSON formatting options", "--json --pretty --details", `"ifname": "lo"`),
+			Entry("brief output", "-br", "lo"),
+			Entry("family and receive buffer options", "-family link -rcvbuf 1048576 -color=never", "lo"),
+		)
+
+		DescribeTable("should reject unsafe or invalid global options",
+			func(options, wantError string) {
+				// A missed validation must not run injected commands on a node.
+				args := withNode(map[string]any{
+					"namespace": "e2e-kernel-validation-" + uuid.NewString(),
+					"command":   "link show",
+					"options":   options,
+				})
+				utils.ExpectToolError(mcpInspector, getIPToolName, args, wantError)
+			},
+			Entry("batch mode", "-batch /tmp/ovnk-e2e-batch", "invalid ip option"),
+			Entry("batch mode with two hyphens", "--batch /tmp/ovnk-e2e-batch", "invalid ip option"),
+			Entry("short batch option", "-b /tmp/ovnk-e2e-batch", "invalid ip option"),
+			Entry("abbreviated batch option", "-ba /tmp/ovnk-e2e-batch", "invalid ip option"),
+			Entry("positional command", "link set lo down", "invalid ip option"),
+			Entry("command after option separator", "-- link set lo down", "invalid ip option"),
+			Entry("missing namespace", "-n", "missing or invalid value for ip option"),
+			Entry("missing family", "-family", "missing or invalid value for ip option"),
+			Entry("missing receive buffer size", "-rcvbuf", "missing or invalid value for ip option"),
+			Entry("option as namespace value", "-n -batch /tmp/ovnk-e2e-batch", "missing or invalid value for ip option"),
+			Entry("unknown family", "-family bogus", "invalid ip address family"),
+			Entry("nonnumeric receive buffer size", "-rcvbuf nope", "invalid ip receive buffer size"),
+			Entry("overflowing receive buffer size", "-rcvbuf 4294967296", "invalid ip receive buffer size"),
+			Entry("invalid color", "-color=bogus", "invalid ip option"),
+			Entry("value on a flag", "-json=true", "invalid ip option"),
+			Entry("bundled short flags", "-sd", "invalid ip option"),
+		)
+
 		It("should retrieve IP routing information from a node", func() {
 			By("Running get-ip to show routes")
 			output, err := mcpInspector.

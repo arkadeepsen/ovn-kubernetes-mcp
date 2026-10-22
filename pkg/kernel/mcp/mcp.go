@@ -160,13 +160,14 @@ table inet ovn-kubernetes
 Parameters:
 - node (required): Name of the node on which ip command is expected to be executed
 - namespace (optional): Namespace of the debug pod on which ip command is expected to be executed. Default: 'default'
-- options (optional): These options helps in providing more details or formatting output data.
-                      -d, -details        : Output more detailed information.
-					  -4                  : shortcut for -family inet.
-					  -6                  : shortcut for -family inet6.
-					  -r, -resolve        : use the system's name resolver to print DNS names instead of host addresses.
-					  -n, -netns <NETNS>  : switches ip to the specified network namespace NETNS.
-					  -a, -all            : executes specified command over all objects, it depends if command supports this option.
+- options (optional): Diagnostic global options, using the following exact names with one or two leading hyphens:
+                      -d, -details; -s, -stats, -statistics; -o, -oneline; -r, -resolve; -a, -all; -N, -Numeric.
+                      -j, -json; -p, -pretty; -br, -brief; -h, -human, -human-readable; -iec.
+                      -t, -timestamp; -ts, -tshort; -c, -color[=always|auto|never].
+                      -4, -6, -0, -B, -M; -f, -family <inet|inet6|link|bridge|mpls>.
+                      -n, -netns <NETNS>; -rc, -rcvbuf <SIZE> (unsigned 32-bit integer).
+Namespace, family, and buffer options require a separate value. Short flags must be separate (e.g., -s -d, not -sd).
+Batch mode, other options, and unlisted abbreviations are rejected.
 - command (required): These options specify the desired action to perform. Only one of them can be specified on the command line unless otherwise stated below.
                       - address show     : protocol (IP or IPv6) address on a device.
 					  - link show        : network device.
