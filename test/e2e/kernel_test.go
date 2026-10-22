@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/google/uuid"
 	mcpKernel "github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/mcp"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/pkg/kernel/types"
 	"github.com/ovn-kubernetes/ovn-kubernetes-mcp/test/e2e/utils"
@@ -80,6 +81,54 @@ var _ = Describe("Kernel Tools", Ordered, func() {
 	})
 
 	Context("get-iptables", func() {
+		DescribeTable("should preserve native listing syntax",
+			func(filters string) {
+				output, err := mcpInspector.MethodCall(getIPTablesToolName, withNode(map[string]any{
+					"table": "filter", "command": "-L", "filter_parameters": filters,
+				})).Execute()
+				Expect(err).NotTo(HaveOccurred())
+				result := utils.UnmarshalCallToolResult[types.Result](output)
+				Expect(result.Data).To(ContainSubstring("Chain INPUT"))
+			},
+			Entry("combined short flags", "INPUT -nv4"),
+			Entry("IPv6 listing", "INPUT -nv6"),
+			Entry("long listing options", "INPUT --numeric --exact --line-numbers"),
+			Entry("wait with separate value", "INPUT -w 1 -n4"),
+			Entry("wait with attached value", "INPUT --wait=1 -n4"),
+		)
+
+		DescribeTable("should reject unsafe or invalid listing filters",
+			func(command, filters, wantError string) {
+				// A missed validation must not change rules or counters on a node.
+				args := withNode(map[string]any{
+					"namespace":         "e2e-kernel-validation-" + uuid.NewString(),
+					"table":             "filter",
+					"command":           command,
+					"filter_parameters": filters,
+				})
+				utils.ExpectToolError(mcpInspector, getIPTablesToolName, args, wantError)
+			},
+			Entry("counter clearing with default command", "", "-Z", "invalid iptables filter option"),
+			Entry("long counter clearing option", "-L", "--zero", "invalid iptables filter option"),
+			Entry("counter clearing in a short bundle", "-L", "-nvZ", "invalid iptables filter option"),
+			Entry("module helper", "-L", "--modprobe=/bin/false", "invalid iptables filter option"),
+			Entry("table override", "-L", "--table=nat", "invalid iptables filter option"),
+			Entry("alternate operation", "-L", "-A INPUT", "invalid iptables filter option"),
+			Entry("unsupported protocol selector", "-L", "-p tcp", "invalid iptables filter option"),
+			Entry("abbreviated long option", "-L", "--num", "invalid iptables filter option"),
+			Entry("value on a flag", "-L", "--numeric=true", "invalid iptables filter option"),
+			Entry("empty wait value", "-L", "--wait=", "invalid iptables filter option"),
+			Entry("nonnumeric wait value", "-L", "-w nope", "invalid value for iptables filter option"),
+			Entry("overflowing wait value", "-L", "-w 2147483648", "invalid value for iptables filter option"),
+			Entry("invalid chain", "-L", "!INPUT", "invalid iptables chain"),
+			Entry("zero rule number", "-L", "INPUT 0", "invalid iptables rule number"),
+			Entry("overflowing rule number", "-L", "INPUT 2147483648", "invalid iptables rule number"),
+			Entry("chain after options", "-L", "-n INPUT", "unexpected iptables filter argument"),
+			Entry("lone hyphen", "-L", "-", "invalid iptables filter option"),
+			Entry("option separator", "-L", "--", "invalid iptables filter option"),
+			Entry("counter clearing with rule listing", "-S", "-Z", "invalid iptables filter option"),
+		)
+
 		It("should retrieve iptables rules from a node", func() {
 			By("Running get-iptables to list filter table rules")
 			output, err := mcpInspector.

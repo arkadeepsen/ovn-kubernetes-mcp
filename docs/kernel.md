@@ -63,7 +63,15 @@ Iptables and ip6tables are used to inspect the tables of IPv4 and IPv6 packet fi
 | `namespace` | string | no | `"default"` | Namespace of the debug pod from where packet filter rules are expected to be extracted |
 | `table` | string | no | `"filter"` | There are currently five independent tables (which tables are present at any time depends on the kernel configuration options and which modules are present). `filter`: This is the default table. `nat`: This table is consulted when a packet that creates a new connection is encountered. `mangle`: This table is used for specialized packet alteration. `raw`: This table is used mainly for configuring exemptions from connection tracking in combination with the NOTRACK target. `security`: This table is used for Mandatory Access Control (MAC) networking rules |
 | `command` | string | no | `"-L"` | These options specify the desired action to perform. Only one of them can be specified on the command line unless otherwise stated below. If omitted or empty, defaults to `-L`. `-L`/`--list [chain]`: List all rules in the selected chain. If no chain is selected, all chains are listed. `-S`/`--list-rules [chain]`: Print all rules in the selected chain. If no chain is selected, all chains are printed like iptables-save |
-| `filter_parameters` | string | no | — | These parameters are useful to filter certain entries from the whole table: `-s`/`--source address[/mask]`: Source specification. Address can be either a network name, a hostname, a network IP address (with /mask), or a plain IP address. `-d`/`--destination address[/mask]`: Destination specification. `-v`/`--verbose`: Verbose output. `-n`/`--numeric`: Numeric output. IP addresses and port numbers will be printed in numeric format. `-p`/`--protocol protocol`: The protocol of the rule or of the packet to check. `-4`/`--ipv4`: IPv4. `-6`/`--ipv6`: IPv6 |
+| `filter_parameters` | string | no | — | Optional chain and rule number, followed by read-only listing options (see below) |
+
+Accepted options are `-v`/`--verbose`, `-n`/`--numeric`, `-x`/`--exact`, `--line-numbers`, `-w`/`--wait [seconds]`, `-4`/`--ipv4`, and `-6`/`--ipv6`. A chain name and optional positive rule number must come before the options (for example, `INPUT 3 -nv4`). Wait seconds must be a non-negative integer.
+
+Short flags may be combined (`-nv4`); wait values may be separate (`-w 5`), attached (`-w5`), or use `--wait=5`. IPv6 is selected only by an explicit `-6`/`--ipv6` flag, including `-6` in a short-flag bundle.
+
+Other options and abbreviated long option names are rejected; select the table through `table`. Source (`-s`), destination (`-d`), and protocol (`-p`) selectors define or check rules; iptables does not support them with listing commands.
+
+Filter options apply to `-L`/`--list`. For `-S`/`--list-rules`, only the IPv4/IPv6 selection is used.
 
 Also accepts common [`head` / `tail` / `apply_tail_first`](user-guide.md#head--tail-line-limiting) and [`timeout_seconds`](user-guide.md#per-call-timeout).
 

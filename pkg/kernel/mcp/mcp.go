@@ -91,14 +91,17 @@ Parameters:
 - command (optional): These options specify the desired action to perform. Only one of them can be specified on the command line unless otherwise stated below. If omitted or empty, defaults to -L.
 					  -L, --list [chain]       : List all rules in the selected chain. If no chain is selected, all chains are listed.
 					  -S, --list-rules [chain] : Print all rules in the selected chain. If no chain is selected, all chains are printed like iptables-save.
-- filter_parameters (optional): These parameters are useful to filter certain entries from the whole table:
-                                -s, --source address[/mask]      : Source specification. Address can be either a network name, a hostname, a network IP address (with /mask), or a  plain  IP  address.
-								-d, --destination address[/mask] : Destination  specification.
+- filter_parameters (optional): An optional chain name and rule number may precede the following listing options:
 								-v, --verbose					 : Verbose output.
 								-n, --numeric                    : Numeric  output.   IP  addresses  and port numbers will be printed in numeric format.
-								-p, --protocol protocol          : The protocol of the rule or of the packet to check.
+								-x, --exact                      : Exact packet and byte counters.
+								-w, --wait [seconds]             : Wait for the xtables lock, optionally for a non-negative number of seconds.
+								--line-numbers                   : Include rule numbers.
 								-4, --ipv4                       : IPv4
 								-6, --ipv6                       : IPv6
+Short flags may be combined (e.g., -nv4). Wait values may be separate (-w 5), attached (-w5), or use --wait=5.
+Other options and abbreviated long option names are rejected. Source, destination, and protocol selectors are not valid with iptables listing commands.
+Filter options apply to -L/--list. For -S/--list-rules, only the IPv4/IPv6 selection is used.
 - head (optional): Return only first N lines. Default: %d lines if tail is not specified
 - tail (optional): Return only last N lines
 - apply_tail_first (optional): If both head and tail are set and apply_tail_first is true,
