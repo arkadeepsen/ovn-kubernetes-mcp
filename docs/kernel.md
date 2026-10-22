@@ -19,7 +19,7 @@ The debug pod uses the image from `--kernel-image` (default `nicolaka/netshoot:v
 
 Use this command to discover a list of all (or a filtered selection of) currently tracked connections.
 
-The tool prefers the `conntrack` CLI in the configured `--kernel-image`. If that binary is missing, it falls back to reading `/proc/net/nf_conntrack`, which only supports dump/list (`-L`/`--dump`) with limited filtering. Count (`-C`/`--count`) and stats (`-S`/`--stats`) require the `conntrack` CLI.
+The tool prefers the `conntrack` CLI in the configured `--kernel-image`. If that binary is missing, it falls back to reading `/proc/net/nf_conntrack`, which only supports dump/list (`-L`/`--dump`) and does not apply filters. Count (`-C`/`--count`) and stats (`-S`/`--stats`) require the `conntrack` CLI.
 
 ### Parameters
 
@@ -28,7 +28,26 @@ The tool prefers the `conntrack` CLI in the configured `--kernel-image`. If that
 | `node` | string | **yes** | — | Name of the node from where conntrack entries are expected to be extracted |
 | `namespace` | string | no | `"default"` | Namespace of the debug pod from where conntrack entries are expected to be extracted |
 | `command` | string | no | `"-L"` | These options specify the particular operation to perform. These options can only be used if configured image has `conntrack` utility available. If omitted or empty, defaults to `-L`. `-L`/`--dump`: List connection tracking table. `-C`/`--count`: Show the table counter. `-S`/`--stats`: Show the in-kernel connection tracking system statistics |
-| `filter_parameters` | string | no | — | These parameters are useful to filter certain entries from the whole table: `-s`/`--src`/`--orig-src IP_ADDRESS`: Match only entries whose source address in the original direction equals to mentioned IP. `-d`/`--dst`/`--orig-dst IP_ADDRESS`: Match only entries whose destination address in the original direction equals to mentioned IP. `-p`/`--proto PROTO`: Specify layer four (TCP, UDP, ...) protocol. `--sport`/`--orig-port-src PORT`: Source port in original direction. `--dport`/`--orig-port-dst PORT`: Destination port in original direction |
+| `filter_parameters` | string | no | — | Read-only dump filters and output options (see below) |
+
+Accepted filters follow the [conntrack manual](https://www.netfilter.org/projects/conntrack-tools/conntrack-manpage.html) and its dump option tables:
+
+| Options | Purpose |
+|---------|---------|
+| `-s`/`--src`/`--orig-src`, `-d`/`--dst`/`--orig-dst`, `-r`/`--reply-src`, `-q`/`--reply-dst` | Original and reply addresses |
+| `--mask-src`, `--mask-dst` | Address masks |
+| `-p`/`--proto`/`--protonum`, `-f`/`--family` | Layer four protocol and IPv4/IPv6 family |
+| `--sport`/`--orig-port-src`, `--dport`/`--orig-port-dst`, `--reply-port-src`, `--reply-port-dst`, `--state` | Protocol ports and state |
+| `-m`/`--mark`, `-c`/`--secmark`, `-u`/`--status`, `-l`/`--label` | Marks, status, and labels |
+| `-w`/`--zone`, `--orig-zone`, `--reply-zone` | Connection tracking zones |
+| `--icmp-type`, `--icmp-code`, `--icmp-id`, `--icmpv6-type`, `--icmpv6-code`, `--icmpv6-id` | ICMP fields |
+| `--srckey`/`--orig-key-src`, `--dstkey`/`--orig-key-dst`, `--reply-key-src`, `--reply-key-dst` | GRE keys |
+| `-o`/`--output` | Output format, such as `extended,id` |
+| `-n`/`--src-nat`, `-g`/`--dst-nat`, `-j`/`--any-nat` | NAT filters, optionally followed by an `ADDRESS[:PORT]` value |
+
+All options require a non-empty value except the NAT filters. Values may be separate (`-p tcp`), attached to short options (`-ptcp`), or use `--name=value`. Supply optional NAT values separately. Conntrack validates protocol-specific values and option combinations. An optional full table name (`conntrack`, `expect`, `dying`, or `unconfirmed`) may precede the options.
+
+Counter clearing (`-z`/`--zero`), alternate operations, and unlisted options or abbreviations are rejected before creating a debug pod. Filters apply only to dump/list; count, stats, and the file fallback do not apply them.
 
 Also accepts common [`head` / `tail` / `apply_tail_first`](user-guide.md#head--tail-line-limiting) and [`timeout_seconds`](user-guide.md#per-call-timeout).
 

@@ -52,12 +52,23 @@ Parameters:
 					  -L, --dump : List connection tracking table.
 					  -C, --count: Show the table counter.
 					  -S, --stats: Show the in-kernel connection tracking system statistics.
-- filter_parameters (optional): These parameters are useful to filter certain entries from the whole table:
+- filter_parameters (optional): Only the following read-only dump filters and output options are accepted:
                         -s, --src, --orig-src IP_ADDRESS : Match only entries whose source address in the original direction equals to mentioned IP.
 						-d, --dst, --orig-dst IP_ADDRESS : Match only entries whose destination address in the original direction equals to mentioned IP.
 						-p, --proto PROTO                : Specify layer four (TCP, UDP, ...) protocol.
 						--sport, --orig-port-src PORT    : Source port in original direction.
 						--dport, --orig-port-dst PORT    : Destination port in original direction.
+Additional filters (each requires a value):
+  -r/--reply-src, -q/--reply-dst, --mask-src, --mask-dst, --protonum, -f/--family,
+  --reply-port-src, --reply-port-dst, --state, -m/--mark, -c/--secmark, -u/--status,
+  -l/--label, -w/--zone, --orig-zone, --reply-zone, -o/--output,
+  --icmp-type, --icmp-code, --icmp-id, --icmpv6-type, --icmpv6-code, --icmpv6-id,
+  --srckey/--orig-key-src, --dstkey/--orig-key-dst, --reply-key-src, --reply-key-dst.
+NAT filters -n/--src-nat, -g/--dst-nat, and -j/--any-nat accept an optional separate ADDRESS[:PORT] value.
+Values may be separate (-p tcp), attached to short options (-ptcp), or use --name=value.
+An optional full table name (conntrack, expect, dying, unconfirmed) may precede the options.
+Counter clearing, alternate operations, and unlisted options or abbreviations are rejected.
+Filters apply only to dump/list. Count, stats, and the /proc file fallback do not apply them.
 - head (optional): Return only first N lines. Default: %d lines if tail is not specified
 - tail (optional): Return only last N lines
 - apply_tail_first (optional): If both head and tail are set and apply_tail_first is true,

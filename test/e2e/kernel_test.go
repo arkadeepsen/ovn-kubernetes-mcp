@@ -286,6 +286,49 @@ var _ = Describe("Kernel Tools", Ordered, func() {
 	})
 
 	Context("get-conntrack", func() {
+		DescribeTable("should preserve read-only dump filters",
+			func(filters string) {
+				output, err := mcpInspector.MethodCall(getConntrackToolName, withNode(map[string]any{
+					"command": "-L", "filter_parameters": filters,
+				})).Execute()
+				Expect(err).NotTo(HaveOccurred())
+				result := utils.UnmarshalCallToolResult[types.Result](output)
+				Expect(result.Data).To(ContainSubstring("flow entries have been shown."))
+			},
+			Entry("protocol and port", "--proto tcp --dport 443"),
+			Entry("attached values", "-s192.0.2.1 -ptcp --dport=443"),
+			Entry("table, family and output", "conntrack --family ipv4 -o extended,id"),
+			Entry("NAT filter", "--src-nat"),
+		)
+
+		DescribeTable("should reject unsafe or invalid dump filters",
+			func(command, filters, wantError string) {
+				// A missed validation must not change connection tracking on a node.
+				args := withNode(map[string]any{
+					"namespace":         "e2e-kernel-validation-" + uuid.NewString(),
+					"command":           command,
+					"filter_parameters": filters,
+				})
+				utils.ExpectToolError(mcpInspector, getConntrackToolName, args, wantError)
+			},
+			Entry("counter clearing with default command", "", "-z", "invalid conntrack filter option"),
+			Entry("long counter clearing option", "--dump", "--zero", "invalid conntrack filter option"),
+			Entry("counter clearing after optional NAT filter", "-L", "--src-nat --zero", "invalid conntrack filter option"),
+			Entry("counter clearing in a short bundle", "-L", "-zn", "invalid conntrack filter option"),
+			Entry("alternate operation", "-L", "--delete", "invalid conntrack filter option"),
+			Entry("abbreviated filter", "-L", "--prot tcp", "invalid conntrack filter option"),
+			Entry("missing protocol", "-L", "-p", "missing value for conntrack filter option"),
+			Entry("empty address", "-L", "--src=", "invalid value for conntrack filter option"),
+			Entry("option as attached address", "-L", "--src=-z", "invalid value for conntrack filter option"),
+			Entry("option as short protocol value", "-L", "-p-z", "invalid value for conntrack filter option"),
+			Entry("option as separate port value", "-L", "--sport --zero", "missing value for conntrack filter option"),
+			Entry("empty optional NAT value", "-L", "--any-nat=", "invalid value for conntrack filter option"),
+			Entry("negated optional NAT value", "-L", "--src-nat !192.0.2.1", "invalid value for conntrack filter option"),
+			Entry("unexpected positional argument", "-L", "-p tcp extra", "invalid conntrack filter option"),
+			Entry("option separator", "-L", "--", "invalid conntrack filter option"),
+			Entry("counter clearing with statistics", "--stats", "--zero", "invalid conntrack filter option"),
+		)
+
 		It("should retrieve connection tracking list from a node", func() {
 			By("Running get-conntrack to list connections")
 			output, err := mcpInspector.
