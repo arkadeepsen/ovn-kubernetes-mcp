@@ -33,9 +33,7 @@ func (s *MCPServer) Pwru(ctx context.Context, req *mcp.CallToolRequest, in types
 		return nil, types.CommandResult{}, err
 	}
 
-	cmd := commandbuilder.NewCommand("pwru", "--output-limit-lines", strconv.Itoa(outputLimitLines))
-	// pwru accepts pcap filter as positional argument(s)
-	cmd.AddIfNotEmpty(in.BPFFilter, in.BPFFilter)
+	cmd := buildPwruCommand(in.BPFFilter, outputLimitLines)
 
 	// If timeout is specified, create a new context with timeout
 	var cancel context.CancelFunc
@@ -44,9 +42,16 @@ func (s *MCPServer) Pwru(ctx context.Context, req *mcp.CallToolRequest, in types
 		defer cancel()
 	}
 
-	stdout, stderr, err := s.runDebugNodeCommand(ctx, in.NodePodNamespace, in.NodeName, s.cfg.PwruImage, cmd.Build(), "/sys/kernel/debug", "/sys/kernel/debug", 0)
+	stdout, stderr, err := s.runDebugNodeCommand(ctx, in.NodePodNamespace, in.NodeName, s.cfg.PwruImage, cmd, "/sys/kernel/debug", "/sys/kernel/debug", 0)
 	if err != nil {
 		return nil, types.CommandResult{}, err
 	}
 	return nil, types.CommandResult{Output: stdout, Stderr: stderr}, nil
+}
+
+func buildPwruCommand(filter string, outputLimitLines int) []string {
+	cmd := commandbuilder.NewCommand("pwru", "--output-limit-lines", strconv.Itoa(outputLimitLines))
+	// pwru accepts the pcap filter as positional argument(s).
+	addPacketFilter(cmd, filter)
+	return cmd.Build()
 }

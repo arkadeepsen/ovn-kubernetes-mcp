@@ -26,7 +26,10 @@ import (
 )
 
 var _ = Describe("Network Tools", Ordered, func() {
-	const tcpdumpToolName = "tcpdump"
+	const (
+		tcpdumpToolName = "tcpdump"
+		pwruToolName    = "pwru"
+	)
 
 	fr := k8se2eframework.NewDefaultFramework("network-tools")
 
@@ -202,6 +205,21 @@ var _ = Describe("Network Tools", Ordered, func() {
 			Expect(strings.ToLower(result.Output)).To(ContainSubstring("tcp"))
 		})
 
+		It("should capture traffic with a BPF filter containing a dash", func() {
+			By("Running tcpdump with a portrange filter")
+			result := callTcpdump(map[string]any{
+				"target_type":  "node",
+				"name":         nodeName,
+				"packet_count": 5,
+				"interface":    "any",
+				"bpf_filter":   fmt.Sprintf("tcp and host %s and portrange 8000-8090", serverIP),
+			})
+
+			By("Verifying tcpdump applied the portrange filter")
+			Expect(result.Output).NotTo(BeEmpty())
+			Expect(result.Output).To(ContainSubstring(serverIP))
+		})
+
 		It("should respect packet_count limit", func() {
 			By("Running tcpdump with packet_count=2")
 			result := callTcpdump(map[string]any{
@@ -292,6 +310,40 @@ var _ = Describe("Network Tools", Ordered, func() {
 				"target_type": "node",
 				"name":        "some-node",
 				"bpf_filter":  "tcp; rm -rf /",
+			}),
+		)
+
+		DescribeTable("should reject bpf_filter values that start with '-'",
+			func(toolName string, toolArgs map[string]any) {
+				utils.ExpectToolError(mcpInspector, toolName, toolArgs, "must not start with '-'")
+			},
+			Entry("tcpdump write-file option", tcpdumpToolName, map[string]any{
+				"target_type": "node",
+				"name":        "some-node",
+				"bpf_filter":  "-w/tmp/capture.pcap",
+			}),
+			Entry("tcpdump option followed by filter", tcpdumpToolName, map[string]any{
+				"target_type": "node",
+				"name":        "some-node",
+				"bpf_filter":  "-w /tmp/capture.pcap tcp",
+			}),
+			Entry("tcpdump option with leading whitespace", tcpdumpToolName, map[string]any{
+				"target_type": "node",
+				"name":        "some-node",
+				"bpf_filter":  "  -w/tmp/capture.pcap",
+			}),
+			Entry("tcpdump end-of-options marker", tcpdumpToolName, map[string]any{
+				"target_type": "node",
+				"name":        "some-node",
+				"bpf_filter":  "--",
+			}),
+			Entry("pwru output-file option", pwruToolName, map[string]any{
+				"node_name":  "some-node",
+				"bpf_filter": "--output-file=/tmp/trace.txt",
+			}),
+			Entry("pwru output-limit-lines option", pwruToolName, map[string]any{
+				"node_name":  "some-node",
+				"bpf_filter": "--output-limit-lines=1000000",
 			}),
 		)
 	})

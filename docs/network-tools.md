@@ -34,7 +34,7 @@ Node captures run in a debug pod on the named node; pod captures exec into the e
 | `container_name` | string | no | — (default container) | Name of the container in the pod when `target_type` is `"pod"` |
 | `interface` | string | no | — (tool default) | Network interface name or `"any"` |
 | `packet_count` | integer | no | `100` (max: `1000`) | Number of packets to capture |
-| `bpf_filter` | string | no | — | BPF filter expression to match packets (e.g., `"tcp and dst port 8080"`, `"host 10.0.0.1"`) |
+| `bpf_filter` | string | no | — | BPF filter expression to match packets (e.g., `"tcp and dst port 8080"`, `"host 10.0.0.1"`). Must not start with `-`. |
 | `snaplen` | integer | no | `96` (max: `1500`) | Snapshot length in bytes |
 
 Also accepts common [`timeout_seconds`](user-guide.md#per-call-timeout).
@@ -86,7 +86,7 @@ This tool creates a specialized debug pod on the specified node with necessary e
 |-----------|------|----------|---------|-------------|
 | `node_name` | string | **yes** | — | Name of the node to run pwru on |
 | `node_pod_namespace` | string | no | `"default"` | Namespace of the debug pod on which the command is expected to be executed |
-| `bpf_filter` | string | no | — | BPF filter expression to match packets (e.g., `"tcp and dst port 8080"`, `"host 10.0.0.1"`) |
+| `bpf_filter` | string | no | — | BPF filter expression to match packets (e.g., `"tcp and dst port 8080"`, `"host 10.0.0.1"`). Must not start with `-`. |
 | `output_limit_lines` | integer | no | `100` (max: `1000`) | Maximum number of trace events to capture |
 
 Also accepts common [`timeout_seconds`](user-guide.md#per-call-timeout).

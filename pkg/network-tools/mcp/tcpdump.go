@@ -58,11 +58,7 @@ func (s *MCPServer) Tcpdump(ctx context.Context, req *mcp.CallToolRequest, in ty
 		return nil, types.CommandResult{}, err
 	}
 
-	cmd := commandbuilder.NewCommand("tcpdump", "-n", "-v",
-		"-s", strconv.Itoa(snaplen),
-		"-c", strconv.Itoa(packetCount))
-	cmd.AddIfNotEmpty(in.Interface, "-i", in.Interface)
-	cmd.AddIfNotEmpty(in.BPFFilter, in.BPFFilter)
+	cmd := buildTcpdumpCommand(in.Interface, in.BPFFilter, snaplen, packetCount)
 
 	// If timeout is specified, create a new context with timeout
 	var cancel context.CancelFunc
@@ -73,13 +69,13 @@ func (s *MCPServer) Tcpdump(ctx context.Context, req *mcp.CallToolRequest, in ty
 
 	switch in.TargetType {
 	case "node":
-		stdout, stderr, err := s.runDebugNodeCommand(ctx, in.Namespace, in.Name, s.cfg.TcpdumpImage, cmd.Build(), "", "", 0)
+		stdout, stderr, err := s.runDebugNodeCommand(ctx, in.Namespace, in.Name, s.cfg.TcpdumpImage, cmd, "", "", 0)
 		if err != nil {
 			return nil, types.CommandResult{}, err
 		}
 		return nil, types.CommandResult{Output: stdout, Stderr: stderr}, nil
 	case "pod":
-		stdout, stderr, err := s.runPodExecCommand(ctx, in.Namespace, in.Name, in.ContainerName, cmd.Build())
+		stdout, stderr, err := s.runPodExecCommand(ctx, in.Namespace, in.Name, in.ContainerName, cmd)
 		if err != nil {
 			return nil, types.CommandResult{}, err
 		}
@@ -87,4 +83,13 @@ func (s *MCPServer) Tcpdump(ctx context.Context, req *mcp.CallToolRequest, in ty
 	default:
 		return nil, types.CommandResult{}, fmt.Errorf("invalid target_type: %s (must be 'node' or 'pod')", in.TargetType)
 	}
+}
+
+func buildTcpdumpCommand(iface, filter string, snaplen, packetCount int) []string {
+	cmd := commandbuilder.NewCommand("tcpdump", "-n", "-v",
+		"-s", strconv.Itoa(snaplen),
+		"-c", strconv.Itoa(packetCount))
+	cmd.AddIfNotEmpty(iface, "-i", iface)
+	addPacketFilter(cmd, filter)
+	return cmd.Build()
 }

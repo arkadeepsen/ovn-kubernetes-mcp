@@ -4,6 +4,7 @@
 package mcp
 
 import (
+	"slices"
 	"strings"
 	"testing"
 )
@@ -424,6 +425,42 @@ func TestValidatePacketFilter(t *testing.T) {
 			filter:    "tcp port 80 && ls",
 			wantError: true,
 		},
+		{
+			name:      "filter with hyphen after the first token",
+			filter:    "tcp and portrange 1-1024",
+			wantError: false,
+		},
+		// Invalid filters - option injection attempts
+		{
+			name:      "invalid filter - tcpdump write option",
+			filter:    "-w/host/etc/cron.d/pwn",
+			wantError: true,
+		},
+		{
+			name:      "invalid filter - tcpdump option with separate value",
+			filter:    "-w /host/etc/cron.d/pwn",
+			wantError: true,
+		},
+		{
+			name:      "invalid filter - pwru output file flag",
+			filter:    "--output-file=/proc/1/root/etc/passwd",
+			wantError: true,
+		},
+		{
+			name:      "invalid filter - pwru output limit override",
+			filter:    "--output-limit-lines=1000000",
+			wantError: true,
+		},
+		{
+			name:      "invalid filter - leading whitespace before option",
+			filter:    "  -w/tmp/x",
+			wantError: true,
+		},
+		{
+			name:      "invalid filter - end of options marker",
+			filter:    "--",
+			wantError: true,
+		},
 		// Invalid filters - length validation
 		{
 			name:      "filter at max length (1024 chars)",
@@ -442,6 +479,72 @@ func TestValidatePacketFilter(t *testing.T) {
 			err := validatePacketFilter(tt.filter)
 			if (err != nil) != tt.wantError {
 				t.Errorf("validatePacketFilter(%q) error = %v, wantError %v", tt.filter, err, tt.wantError)
+			}
+		})
+	}
+}
+
+func TestBuildTcpdumpCommand(t *testing.T) {
+	tests := []struct {
+		name   string
+		iface  string
+		filter string
+		want   []string
+	}{
+		{
+			name: "no interface or filter",
+			want: []string{"tcpdump", "-n", "-v", "-s", "96", "-c", "100"},
+		},
+		{
+			name:   "filter follows end of options marker",
+			iface:  "eth0",
+			filter: "tcp port 80",
+			want:   []string{"tcpdump", "-n", "-v", "-s", "96", "-c", "100", "-i", "eth0", "--", "tcp port 80"},
+		},
+		{
+			name:   "option-like filter stays positional",
+			filter: "-w/host/etc/cron.d/pwn",
+			want:   []string{"tcpdump", "-n", "-v", "-s", "96", "-c", "100", "--", "-w/host/etc/cron.d/pwn"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildTcpdumpCommand(tt.iface, tt.filter, DefaultSnaplen, DefaultPacketCount)
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("buildTcpdumpCommand() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBuildPwruCommand(t *testing.T) {
+	tests := []struct {
+		name   string
+		filter string
+		want   []string
+	}{
+		{
+			name: "no filter",
+			want: []string{"pwru", "--output-limit-lines", "100"},
+		},
+		{
+			name:   "filter follows end of options marker",
+			filter: "host 10.244.0.5",
+			want:   []string{"pwru", "--output-limit-lines", "100", "--", "host 10.244.0.5"},
+		},
+		{
+			name:   "flag-like filter stays positional",
+			filter: "--output-file=/proc/1/root/etc/passwd",
+			want:   []string{"pwru", "--output-limit-lines", "100", "--", "--output-file=/proc/1/root/etc/passwd"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildPwruCommand(tt.filter, DefaultOutputLimitLines)
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("buildPwruCommand() = %q, want %q", got, tt.want)
 			}
 		})
 	}
